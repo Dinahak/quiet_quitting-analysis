@@ -1,0 +1,269 @@
+---
+title: "phase_1"
+author: "Dinah"
+date: "2025-07-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Loading the data set.**
+
+```{r}
+library(readr)
+my_dataset <- read_delim("C:/Users/Asus/Downloads/Quiet-quitting (4)/Quiet-quitting/quiet_quitting_dataset.psv", 
+    delim = "|", escape_double = FALSE, trim_ws = TRUE)
+View(my_dataset)
+```
+
+**remove null values**
+
+```{r}
+my_dataset <- na.omit(my_dataset)
+
+```
+
+**loading libraries**
+
+```{r}
+library(bayesrules)
+library(tidybayes)
+library(bayesplot)
+library(rstanarm)
+library(tidyverse)
+library(broom.mixed)
+library(readr)
+library(readxl)
+
+
+```
+
+**Description of univariate distributions.**
+
+```{r}
+summary(my_dataset)
+str(my_dataset)
+
+```
+
+```{r}
+glimpse(my_dataset)
+
+```
+
+```{r}
+colnames(data)
+```
+
+```{r}
+library(dplyr)
+
+numeric_vars <- my_dataset %>% select(where(is.numeric))
+categorical_vars <- my_dataset %>% select(where(is.character))
+
+
+```
+
+**Histogram for numeric values**
+
+```{r}
+library(ggplot2)
+library(tidyr)
+
+numeric_vars %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  facet_wrap(~ name, scales = "free") +
+  theme_minimal() +
+  labs(title = "Histograms of Numeric Variables")
+
+
+```
+
+**Description of bivariate distributions.**
+
+```{r}
+outcome_var <- "Quiet_quitting_bahaviour"
+
+```
+
+**Job satisfaction vs Quiet quitting.**
+
+```{r}
+ggplot(my_dataset, aes(x = Job_satisfaction, y = Quiet_quitting_behavior)) +
+
+  geom_point(alpha = 0.3) +
+
+  geom_smooth(method = "lm", color = "red") +
+
+  labs(title = "Job Satisfaction vs Quiet Quitting", x = "Job Satisfaction", y = "Quiet Quitting Behavior")
+
+
+```
+
+**Perceived_org_support vs quiet quitting**
+
+```{r}
+ggplot(my_dataset, aes(x = Perceived_org_support , y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Perceived_org_support  vs Quiet Quitting", x = "Perceived_org_support ", y = "Quiet Quitting Behavior")
+
+```
+
+```{r}
+ggplot(my_dataset, aes(x = Work_engagement, y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Work Engagement vs Quiet Quitting Behavior",
+       x = "Work Engagement", y = "Quiet Quitting Behavior")
+```
+
+```{r}
+ggplot(my_dataset, aes(x = Psychological_meaningfulness, y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Psychological Meaningfulness vs Quiet Quitting Behavior",
+       x = "Psychological Meaningfulness", y = "Quiet Quitting Behavior") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(my_dataset, aes(x = Org_culture, y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "orange") +
+  labs(title = "Organizational Culture vs Quiet Quitting Behavior",
+       x = "Org Culture", y = "Quiet Quitting Behavior") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(my_dataset, aes(x = Psychological_resilience, y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "brown") +
+  labs(title = "Psychological Resilience vs Quiet Quitting Behavior",
+       x = "Psychological Resilience", y = "Quiet Quitting Behavior") +
+  theme_minimal()
+
+
+```
+
+```{r}
+ggplot(my_dataset, aes(x = moderation_term, y = Quiet_quitting_behavior)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Moderation Term vs Quiet Quitting Behavior",
+       x = "Moderation Term", y = "Quiet Quitting Behavior") +
+  theme_minimal()
+
+```
+
+**Identify any anomalous and outlier observations along with associated rationale for identifying them as such**
+
+```{r}
+
+numeric_data <- my_dataset %>% select(where(is.numeric))  
+iqr_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25)
+  Q3 <- quantile(x, 0.75)
+  IQR <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR
+  upper <- Q3 + 1.5 * IQR
+  return(which(x < lower | x > upper))
+}
+
+iqr_results <- lapply(numeric_data, iqr_outliers)
+
+# Print count of outliers per variable
+sapply(iqr_results, length)
+
+
+```
+
+```{r}
+z_score_outliers <- function(x) {
+  z <- scale(x)
+  which(abs(z) > 3)
+}
+
+z_results <- lapply(numeric_data, z_score_outliers)
+
+# Print count of outliers per variable
+sapply(z_results, length)
+
+```
+
+```{r}
+numeric_data %>%
+  pivot_longer(cols = everything()) %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Boxplot of Numeric Variables (Outliers Highlighted)",
+       x = "Variables", y = "Values")
+
+
+
+```
+
+**Specify a comprehensive model that includes all of the predictors and the outcome.**
+
+```{r}
+full_model <- stan_glm(
+  Quiet_quitting_behavior ~ .,
+  data = my_dataset,
+  family = gaussian(),         # continuous outcome
+  prior = normal(0, 2.5),      # weakly informative prior
+  prior_intercept = normal(30, 5),  # prior around the center of your outcome
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+
+```
+
+```{r}
+summary(full_model)        
+     
+
+```
+
+```{r}
+mcmc_trace(full_model)
+```
+
+```{r}
+mcmc_dens_overlay(full_model)
+```
+
+```{r}
+mcmc_acf(full_model)
+```
+
+```{r}
+neff_ratio(full_model)
+```
+
+```{r}
+# Get credible intervals & hypothesis testing
+posterior_interval(full_model, prob = 0.95)
+
+```
+
+```{r}
+rhat(full_model)
+```
+
+```{r}
+tidy(full_model,
+     effects=c("fixed","aux"),
+     conf.int = TRUE,
+     conf.level = 0.95) ->output
+as.data.frame(output)
+     
+```
